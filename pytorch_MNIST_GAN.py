@@ -1,5 +1,7 @@
 import os
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import itertools
 import pickle
 import imageio
@@ -9,6 +11,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+
+CUDA = False
+device = 'gpu' if CUDA else 'cpu'
 
 # G(z)
 class generator(nn.Module):
@@ -51,10 +56,10 @@ class discriminator(nn.Module):
         return x
 
 fixed_z_ = torch.randn((5 * 5, 100))    # fixed noise
-fixed_z_ = Variable(fixed_z_.cuda(), volatile=True)
+fixed_z_ = Variable(fixed_z_.to(device), volatile=True)
 def show_result(num_epoch, show = False, save = False, path = 'result.png', isFix=False):
     z_ = torch.randn((5*5, 100))
-    z_ = Variable(z_.cuda(), volatile=True)
+    z_ = Variable(z_.to(device), volatile=True)
 
     G.eval()
     if isFix:
@@ -125,8 +130,8 @@ train_loader = torch.utils.data.DataLoader(
 # network
 G = generator(input_size=100, n_class=28*28)
 D = discriminator(input_size=28*28, n_class=1)
-G.cuda()
-D.cuda()
+G.to(device)
+D.to(device)
 
 # Binary Cross Entropy loss
 BCE_loss = nn.BCELoss()
@@ -160,13 +165,14 @@ for epoch in range(train_epoch):
         y_real_ = torch.ones(mini_batch)
         y_fake_ = torch.zeros(mini_batch)
 
-        x_, y_real_, y_fake_ = Variable(x_.cuda()), Variable(y_real_.cuda()), Variable(y_fake_.cuda())
+        x_, y_real_, y_fake_ = Variable(x_.to(device)), Variable(y_real_.to(device)), Variable(y_fake_.to(device))
         D_result = D(x_)
         D_real_loss = BCE_loss(D_result, y_real_)
         D_real_score = D_result
 
         z_ = torch.randn((mini_batch, 100))
-        z_ = Variable(z_.cuda())
+        z_ = Variable(z_.to(device))
+
         G_result = G(z_)
 
         D_result = D(G_result)
@@ -186,7 +192,7 @@ for epoch in range(train_epoch):
         z_ = torch.randn((mini_batch, 100))
         y_ = torch.ones(mini_batch)
 
-        z_, y_ = Variable(z_.cuda()), Variable(y_.cuda())
+        z_, y_ = Variable(z_.to(device)), Variable(y_.to(device))
         G_result = G(z_)
         D_result = D(G_result)
         G_train_loss = BCE_loss(D_result, y_)
